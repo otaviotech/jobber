@@ -37,15 +37,17 @@ async function main() {
     return 0;
 }
 
-const task = cron.schedule('*/15 * * * *', async () => {
-    const executionDate = formatISO9075(new Date());
+const task = cron.schedule('*/15 * * * *', () => {
+    const getCurrentDate = () => formatISO9075(new Date());
     const executionId = nanoid();
 
-    console.log(`\nStarted scheduled crawling at ${executionDate} . executionId: ${executionId} .\n`);
+    console.log(`\nStarted scheduled crawling at ${getCurrentDate()} - executionId: ${executionId}`);
 
-    await main();
-
-    console.log(`\nFinished scheduled crawling at ${executionDate} . executionId: ${executionId} .\n`);
+    main()
+        .then(() => {
+            console.log(`Finished scheduled crawling at ${getCurrentDate()} - executionId: ${executionId}\n`);
+        })
+        .catch(console.error);
 });
 
 task.start();
