@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "start": "node ./src/index.js",
-    "container": "node ./src/container.js"
+    "lint": "eslint ./src --ext .js",
+    "lint:fix": "yarn run lint --fix"
   },
   "dependencies": {
     "awilix": "^4.2.7",
@@ -17,5 +18,10 @@
     "nanoid": "^3.1.16",
     "node-cron": "^2.0.3",
     "nodemailer": "^6.4.14"
+  },
+  "devDependencies": {
+    "eslint": "^7.12.1",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-plugin-import": "^2.22.1"
   }
 }

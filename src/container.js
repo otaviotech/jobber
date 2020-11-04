@@ -26,37 +26,37 @@ const container = awilix.createContainer({
 
 // Register repositories
 container.register({
-    jobRepository: awilix.asClass(JobRepository),
-    sourceRepository: awilix.asClass(SourceRepository),
-    subscriptionRepository: awilix.asClass(SubscriptionRepository),
+  jobRepository: awilix.asClass(JobRepository),
+  sourceRepository: awilix.asClass(SourceRepository),
+  subscriptionRepository: awilix.asClass(SubscriptionRepository),
 });
 
 // Register domain services
 container.register({
-    bauruEmpregosService: awilix.asClass(BauruEmpregosService),
-    notifyService: awilix.asClass(NotifyService),
-    subscriptionService: awilix.asClass(SubscriptionService),
+  bauruEmpregosService: awilix.asClass(BauruEmpregosService),
+  notifyService: awilix.asClass(NotifyService),
+  subscriptionService: awilix.asClass(SubscriptionService),
 });
 
 const nodeMailerAdapter = new NodemailerAdapter({
-    service: 'gmail',
-    user: env.gmail.user,
-    pass: env.gmail.pass,
+  service: 'gmail',
+  user: env.gmail.user,
+  pass: env.gmail.pass,
 });
 
 // Register infra services
 container.register({
-    emailService: awilix.asValue(new EmailService({ adapter: nodeMailerAdapter })),
+  emailService: awilix.asValue(new EmailService({ adapter: nodeMailerAdapter })),
 });
 
 container.register({
-    crawler: awilix.asClass(Crawler),
+  crawler: awilix.asClass(Crawler),
 });
 
 // Register values
 container.register({
-    db: awilix.asValue(db),
-    env: awilix.asValue(env),
+  db: awilix.asValue(db),
+  env: awilix.asValue(env),
 });
 
 module.exports = container;

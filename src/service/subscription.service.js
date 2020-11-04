@@ -1,59 +1,67 @@
 const Notification = require('../model/notification.model');
 
 module.exports = class SubscriptionService {
-    constructor({ subscriptionRepository } = {}) {
-        this.subscriptionRepository = subscriptionRepository;
-    }
+  constructor({ subscriptionRepository } = {}) {
+    this.subscriptionRepository = subscriptionRepository;
+  }
 
-    async getSubscriptionsBySource(source) {
-        return this.subscriptionRepository.getSubscriptionsBySource(source);
-    }
+  async getSubscriptionsBySource(source) {
+    return this.subscriptionRepository.getSubscriptionsBySource(source);
+  }
 
-    async getNotificationsBySubscription(source, jobs) {
-        const subscriptions = await this.getSubscriptionsBySource(source);
+  async getNotificationsBySubscription(source, jobs) {
+    const subscriptions = await this.getSubscriptionsBySource(source);
 
-        const notifications = [];
+    const notifications = [];
 
-        const asCaseInsensitiveRegExp = str => new RegExp(str, 'i');
+    const asCaseInsensitiveRegExp = (str) => new RegExp(str, 'i');
 
-        subscriptions.forEach((subscription) => {
-            jobs.forEach((job) => {
-                const titleMatches = subscription.tags.some((tag => asCaseInsensitiveRegExp(tag).test(job.title)));
-                const descriptionMatches = subscription.tags.some((tag => asCaseInsensitiveRegExp(tag).test(job.description)));
+    subscriptions.forEach((subscription) => {
+      jobs.forEach((job) => {
+        const titleMatches = subscription.tags
+          .some(((tag) => asCaseInsensitiveRegExp(tag).test(job.title)));
 
-                const titleMatchesExclude = subscription.excludeTags.some((excludeTag => asCaseInsensitiveRegExp(excludeTag).test(job.title)));
-                const descriptionMatchesExclude = subscription.excludeTags.some((excludeTag => asCaseInsensitiveRegExp(excludeTag).test(job.description)));
+        const descriptionMatches = subscription
+          .tags
+          .some(((tag) => asCaseInsensitiveRegExp(tag).test(job.description)));
 
-                const shouldExclude = titleMatchesExclude || descriptionMatchesExclude;
-                const shouldNotify = !shouldExclude && (titleMatches || descriptionMatches);
+        const titleMatchesExclude = subscription
+          .excludeTags
+          .some(((excludeTag) => asCaseInsensitiveRegExp(excludeTag).test(job.title)));
 
-                if (!shouldNotify) {
-                    return;
-                }
+        const descriptionMatchesExclude = subscription
+          .excludeTags
+          .some(((excludeTag) => asCaseInsensitiveRegExp(excludeTag).test(job.description)));
 
-                let notification = notifications.find(n => n.subscription.id === subscription.id);
-                let isNewNotification = !notification;
+        const shouldExclude = titleMatchesExclude || descriptionMatchesExclude;
+        const shouldNotify = !shouldExclude && (titleMatches || descriptionMatches);
 
-                if (!notification) {
-                    notification = new Notification({ subscription, jobs: [] });
-                }
+        if (!shouldNotify) {
+          return;
+        }
 
+        let notification = notifications.find((n) => n.subscription.id === subscription.id);
+        const isNewNotification = !notification;
 
-                const isNewJob = !notification.jobs.find(j => j.id === job.id);
-                
-                if (isNewJob) {
-                    notification.jobs.push(job);
-                }
+        if (!notification) {
+          notification = new Notification({ subscription, jobs: [] });
+        }
 
-                if (isNewNotification) {
-                    notifications.push(notification);
-                }
-            });
-        });
+        const isNewJob = !notification.jobs.find((j) => j.id === job.id);
 
-        return notifications.map(n => new Notification({ 
-            subscription: n.subscription, 
-            jobs: n.jobs,
-        }));
-    }
+        if (isNewJob) {
+          notification.jobs.push(job);
+        }
+
+        if (isNewNotification) {
+          notifications.push(notification);
+        }
+      });
+    });
+
+    return notifications.map((n) => new Notification({
+      subscription: n.subscription,
+      jobs: n.jobs,
+    }));
+  }
 };
