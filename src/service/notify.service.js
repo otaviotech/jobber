@@ -1,9 +1,15 @@
-module.exports = function NotifyService({ emailService }) {
-    async function notifyByEmail(notifications) {
+module.exports = class NotifyService {
+    constructor({ emailService } = {}) {
+        this.emailService = emailService;
+    }
+
+    async notifyByEmail(notifications) {
         const notificationCount = notifications.length;
         const jobCount = notifications.reduce((p, c) => p + c.jobs.length, 0);
 
-        console.log(`Notifying ${notificationCount} users about ${jobCount} new opportunities`);
+        const source = notifications[0].jobs[0].jobSource;
+
+        console.log(`[NotifyService] Notifying ${notificationCount} users about ${jobCount} new opportunities from source ${source}.`);
 
         const promises = notifications.map((notification) => {
             const emailOptions = { 
@@ -14,13 +20,9 @@ module.exports = function NotifyService({ emailService }) {
                 html: notification.emailHtml,
             };
 
-            return emailService.sendEmail(emailOptions);
+            return this.emailService.sendEmail(emailOptions);
         });
 
         return promises;
     }
-
-    return {
-        notifyByEmail,
-    };
 };

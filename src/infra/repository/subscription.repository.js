@@ -1,9 +1,13 @@
 const Subscription = require('../../model/subscription.model');
 const SubscriptionMetadata = require('../../model/subscriptionMetadata.model');
 
-module.exports = function SubscriptionRepository(db) {
-    async function getSubscriptionsBySource(source) {
-        const dbSubscriptions = await db
+module.exports = class SubscriptionRepository {
+    constructor({ db } = {}) {
+        this.db = db;
+    }
+
+    async getSubscriptionsBySource(source) {
+        const dbSubscriptions = await this.db
             .get('subscriptions')
             .filter(s => s.sources.includes(source))
             .value();
@@ -25,8 +29,4 @@ module.exports = function SubscriptionRepository(db) {
 
         return subscriptions;
     }
-
-    return {
-        getSubscriptionsBySource,
-    };
 }

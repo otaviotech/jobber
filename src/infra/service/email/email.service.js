@@ -1,11 +1,11 @@
-module.exports = function EmailService(adapter) {
-    async function sendEmail({ from, to, subject, text, html }) {
-        const mailOptions = { from, to, subject, text, html };
-
-        return adapter.sendEmail(mailOptions);
+module.exports = class EmailService {
+    constructor({ adapter } = {}) {
+        this.adapter = adapter;
     }
 
-    return {
-        sendEmail,
-    };
+    async sendEmail({ from, to, subject, text, html }) {
+        const mailOptions = { from, to, subject, text, html };
+
+        return this.adapter.sendEmail(mailOptions);
+    }
 };

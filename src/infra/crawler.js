@@ -1,11 +1,13 @@
-const Crawler = require('crawler');
+const NodeCrawler = require('crawler');
 
-module.exports = function () {
-    const crawler = new Crawler({});
+module.exports = class Crawler {
+    constructor() {
+        this.crawler = new NodeCrawler({});
+    }
 
-    async function getPage(url) {
-        return new Promise(function (resolve, reject) {
-            crawler.queue({
+    async getPage(url) {
+        return new Promise((resolve, reject) => {
+            this.crawler.queue({
                 uri: url,
                 callback: (error, res, done) => {
                     if (error) {
@@ -18,9 +20,5 @@ module.exports = function () {
                 }
             });
         });
-    }
-
-    return {
-        getPage,
     }
 };

@@ -1,8 +1,12 @@
 const Source = require('../../model/source.model');
 
-module.exports = function SourceRepository(db) {
-    async function getSource(jobSource) {
-        const dbSource = await db
+module.exports = class SourceRepository {
+    constructor({ db } = {}) {
+        this.db = db;
+    }
+
+    async getSource(jobSource) {
+        const dbSource = await this.db
             .get('sources')
             .find((h) => h.jobSource = jobSource)
             .value();
@@ -24,16 +28,16 @@ module.exports = function SourceRepository(db) {
         return source;
     }
 
-    async function update(source) {
+    async update(source) {
         const findBySource = (h) => h.jobSource = source.jobSource;
 
-        const exists = !!await db.get('sources').find(findBySource).value();
+        const exists = !!await this.db.get('sources').find(findBySource).value();
 
         if (!exists) {
             throw new Error(`[SourceRepository] 404 - History not found for source ${source.jobSource}.`);
         }
 
-        const updatedSource = await db
+        const updatedSource = await this.db
             .get('sources')
             .find(findBySource)
             .assign({
@@ -45,9 +49,4 @@ module.exports = function SourceRepository(db) {
 
         return updatedSource;
     }
-
-    return {
-        getSource,
-        update,
-    };
 }

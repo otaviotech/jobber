@@ -1,12 +1,16 @@
 const Notification = require('../model/notification.model');
 
-module.exports = function SubscriptionService({ subscriptionRepository }) {
-    async function getSubscriptionsBySource(source) {
-        return subscriptionRepository.getSubscriptionsBySource(source);
+module.exports = class SubscriptionService {
+    constructor({ subscriptionRepository } = {}) {
+        this.subscriptionRepository = subscriptionRepository;
     }
 
-    async function getNotificationsBySubscription(source, jobs) {
-        const subscriptions = await getSubscriptionsBySource(source);
+    async getSubscriptionsBySource(source) {
+        return this.subscriptionRepository.getSubscriptionsBySource(source);
+    }
+
+    async getNotificationsBySubscription(source, jobs) {
+        const subscriptions = await this.getSubscriptionsBySource(source);
 
         const notifications = [];
 
@@ -51,9 +55,5 @@ module.exports = function SubscriptionService({ subscriptionRepository }) {
             subscription: n.subscription, 
             jobs: n.jobs,
         }));
-    }
-
-    return {
-        getNotificationsBySubscription,
     }
 };

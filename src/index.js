@@ -1,36 +1,10 @@
 const cron = require('node-cron');
 const { nanoid } = require('nanoid');
 const formatISO9075 = require('date-fns/formatISO9075');
-require('dotenv').config();
-
-const db = require('./infra/db');
-const Crawler = require('./infra/crawler');
-const SourceRepository = require('./infra/repository/source.repository');
-const SubscriptionRepository = require('./infra/repository/subscription.repository');
-const BauruEmpregosService = require('./service/bauruEmpregosService');
-const SubscriptionService = require('./service/subscription.service');
-const NotifyService = require('./service/notify.service');
-const EmailService = require('./infra/service/email/email.service');
-const NodeMailerAdapter = require('./infra/service/email/adapters/nodemailer.adapter');
-const env = require('./env');
+const container = require('./container');
 
 async function main() {
-    const crawler = Crawler();
-    const nodeMailerAdapter = new NodeMailerAdapter({
-        service: 'gmail',
-        user: env.gmail.user,
-        pass: env.gmail.pass,
-    });
-
-    // Repositories
-    const sourceRepository = SourceRepository(db);
-    const subscriptionRepository = SubscriptionRepository(db);
-
-    // Services
-    const emailService = EmailService(nodeMailerAdapter);
-    const notifyService = NotifyService({ emailService });
-    const subscriptionService = SubscriptionService({ subscriptionRepository });
-    const bauruEmpregosService = BauruEmpregosService({ crawler, sourceRepository, subscriptionService, notifyService });
+    const bauruEmpregosService = container.resolve('bauruEmpregosService');
 
     await bauruEmpregosService.run();
 

@@ -4,9 +4,11 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "node ./src/index.js"
+    "start": "node ./src/index.js",
+    "container": "node ./src/container.js"
   },
   "dependencies": {
+    "awilix": "^4.2.7",
     "axios": "^0.21.0",
     "crawler": "^1.2.2",
     "date-fns": "^2.16.1",

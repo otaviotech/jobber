@@ -1,29 +1,36 @@
 const formatISO = require('date-fns/formatISO');
-const Source = require('../model/source.model');
-const Job = require('../model/job.model');
-const JobSource = require('../constants/jobSource');
+const Source = require('../../model/source.model');
+const Job = require('../../model/job.model');
+const JobSource = require('../../constants/jobSource');
 
-module.exports = function BauruEmpregosService ({ 
-    crawler, 
-    sourceRepository, 
-    subscriptionService, 
-    notifyService,
- } = {}) {
-    async function updateSource(lastCheck, lastJobIdentifier) {
+module.exports = class BauruEmpregosService  {
+    constructor({ 
+        crawler, 
+        sourceRepository, 
+        subscriptionService, 
+        notifyService,
+    } = {}) {
+        this.crawler = crawler;
+        this.sourceRepository = sourceRepository;
+        this.subscriptionService = subscriptionService;
+        this.notifyService = notifyService;
+    }
+
+    async updateSource(lastCheck, lastJobIdentifier) {
         const historyEntry = new Source({
             jobSource: JobSource.BAURU_EMPREGOS,
             lastJobIdentifier,
             lastCheck,
         });
 
-        const updatedSource = await sourceRepository.update(historyEntry);
-        
+        const updatedSource = await this.sourceRepository.update(historyEntry);
+
         return updatedSource;
     }
 
-    async function getJobDetails(jobSummary, source) {
+    async getJobDetails(jobSummary, source) {
         const url = source.baseUrl + jobSummary.url;
-        const page = await crawler.getPage(url);
+        const page = await this.crawler.getPage(url);
         const $ = page.$;
         const title = $('.descricao-vaga h1 b').text().trim();
         const date = $('.descricao-vaga p').first().text().trim().replace('Cadastrado em: ', '');
@@ -35,7 +42,7 @@ module.exports = function BauruEmpregosService ({
         return job;
     }
 
-    function parseJobsFromPage(page) {
+    parseJobsFromPage(page) {
         const jobs = page.$('.vaga').map(function (index, element) {
             const $ = page.$(this);
             
@@ -53,12 +60,12 @@ module.exports = function BauruEmpregosService ({
         return jobs;
     }
 
-    async function hasNewJobs(lastFoundJobIdentifier) {
-        const source = await sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
+    async hasNewJobs(lastFoundJobIdentifier) {
+        const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
         return lastFoundJobIdentifier !== source.lastJobIdentifier;
     }
 
-    function getNewJobs(jobs, lastJobIdentifier) {
+    getNewJobs(jobs, lastJobIdentifier) {
         const newJobs = [];
 
         jobs.some((job) => {
@@ -77,17 +84,22 @@ module.exports = function BauruEmpregosService ({
         return newJobs;
     }
 
-    async function expandJobSumaries(jobSummaries, source) {
-        return await Promise.all(jobSummaries.map(js => getJobDetails(js, source)));
+    async expandJobSumaries(jobSummaries, source) {
+        return await Promise.all(jobSummaries.map(js => this.getJobDetails(js, source)));
     }
 
-    async function run() {
-        const source = await sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
-        const fullJobsPage = await crawler.getPage(source.jobsUrl);
-        const jobSummaries = parseJobsFromPage(fullJobsPage);
+    async run() {
+        console.log(`[BauruEmpregosService] Started crawling.`);
+        console.log(`[BauruEmpregosService] Fetching source ${JobSource.BAURU_EMPREGOS}.`);
+        const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
+
+        console.log(`[BauruEmpregosService] Fetching jobs page.`);
+        const fullJobsPage = await this.crawler.getPage(source.jobsUrl);
+
+        const jobSummaries = this.parseJobsFromPage(fullJobsPage);
         const lastFoundJobIdentifier = jobSummaries[0].id;
-        
-        const shouldUpdate = await hasNewJobs(lastFoundJobIdentifier);
+
+        const shouldUpdate = await this.hasNewJobs(lastFoundJobIdentifier);
 
         if (!shouldUpdate) {
             console.log(`[BauruEmpregosService] No new jobs since job with id ${source.lastJobIdentifier}.`);
@@ -95,29 +107,26 @@ module.exports = function BauruEmpregosService ({
         }
 
         // TODO: fetch jobSummaries until last recorded.
-        const newJobsSummaries = getNewJobs(jobSummaries, source.lastJobIdentifier);
-        const newJobs = await expandJobSumaries(newJobsSummaries, source);
-        const notifications = await subscriptionService.getNotificationsBySubscription(JobSource.BAURU_EMPREGOS, newJobs);
+        const newJobsSummaries = this.getNewJobs(jobSummaries, source.lastJobIdentifier);
+
+        console.log(`[BauruEmpregosService] Expanding ${newJobsSummaries.length} new jobs.`);
+        const newJobs = await this.expandJobSumaries(newJobsSummaries, source);
+
+        const notifications = await this.subscriptionService.getNotificationsBySubscription(JobSource.BAURU_EMPREGOS, newJobs);
         
         const hasNotificationsToSend = notifications.length > 0;
 
         if (hasNotificationsToSend) {
-            await notifyService.notifyByEmail(notifications);
+            await this.notifyService.notifyByEmail(notifications);
         }
 
         const lastCheck = formatISO(new Date());
         const lastJobIdentifier = newJobs[0].id;
 
         // This is needed so we don't notify users about the same job more than once.
-        await updateSource(lastCheck, lastJobIdentifier);
+        await this.updateSource(lastCheck, lastJobIdentifier);
         console.log(`[BauruEmpregosService] Updating lastJobIdentifier to ${lastJobIdentifier} and lastCheck to ${lastCheck}.`);
 
         return true;
-    }
-
-    return {
-        getJobDetails,
-        parseJobsFromPage,
-        run,
     }
 }
