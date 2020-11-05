@@ -19,6 +19,7 @@ const SubscriptionService = require('./service/subscription.service');
 const EmailService = require('./infra/service/email/email.service');
 const Crawler = require('./infra/crawler');
 const NodemailerAdapter = require('./infra/service/email/adapters/nodemailer.adapter');
+const Logger = require('./infra/logger');
 
 const container = awilix.createContainer({
   injectionMode: awilix.InjectionMode.PROXY,
@@ -47,6 +48,7 @@ const nodeMailerAdapter = new NodemailerAdapter({
 // Register infra services
 container.register({
   emailService: awilix.asValue(new EmailService({ adapter: nodeMailerAdapter })),
+  logger: awilix.asClass(Logger),
 });
 
 container.register({

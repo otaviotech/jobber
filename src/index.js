@@ -3,6 +3,11 @@ const { nanoid } = require('nanoid');
 const formatISO9075 = require('date-fns/formatISO9075');
 const container = require('./container');
 
+const logger = container.resolve('logger');
+
+// Temporary
+process.on('uncaughtException', logger.error);
+
 async function main() {
   const bauruEmpregosService = container.resolve('bauruEmpregosService');
 
@@ -15,13 +20,13 @@ const task = cron.schedule('*/15 * * * *', () => {
   const getCurrentDate = () => formatISO9075(new Date());
   const executionId = nanoid();
 
-  console.log(`\nStarted scheduled crawling at ${getCurrentDate()} - executionId: ${executionId}`);
+  logger.info(`\nStarted scheduled crawling at ${getCurrentDate()} - executionId: ${executionId}`);
 
   main()
     .then(() => {
-      console.log(`Finished scheduled crawling at ${getCurrentDate()} - executionId: ${executionId}\n`);
+      logger.info(`Finished scheduled crawling at ${getCurrentDate()} - executionId: ${executionId}\n`);
     })
-    .catch(console.error);
+    .catch(logger.error);
 });
 
 task.start();

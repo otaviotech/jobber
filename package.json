@@ -9,11 +9,13 @@
     "lint:fix": "yarn run lint --fix"
   },
   "dependencies": {
+    "@sentry/node": "^5.27.3",
     "awilix": "^4.2.7",
     "axios": "^0.21.0",
     "crawler": "^1.2.2",
     "date-fns": "^2.16.1",
     "dotenv": "^8.2.0",
+    "log4js": "^6.3.0",
     "lowdb": "^1.0.0",
     "nanoid": "^3.1.16",
     "node-cron": "^2.0.3",

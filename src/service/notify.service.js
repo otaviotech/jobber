@@ -1,6 +1,7 @@
 module.exports = class NotifyService {
-  constructor({ emailService } = {}) {
+  constructor({ emailService, logger } = {}) {
     this.emailService = emailService;
+    this.logger = logger;
   }
 
   async notifyByEmail(notifications) {
@@ -9,7 +10,7 @@ module.exports = class NotifyService {
 
     const source = notifications[0].jobs[0].jobSource;
 
-    console.log(`[NotifyService] Notifying ${notificationCount} users about ${jobCount} new opportunities from source ${source}.`);
+    this.logger.info(`[NotifyService] Notifying ${notificationCount} users about ${jobCount} new opportunities from source ${source}.`);
 
     const promises = notifications.map((notification) => {
       const emailOptions = {

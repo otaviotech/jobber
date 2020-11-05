@@ -9,11 +9,13 @@ module.exports = class BauruEmpregosService {
     sourceRepository,
     subscriptionService,
     notifyService,
+    logger,
   } = {}) {
     this.crawler = crawler;
     this.sourceRepository = sourceRepository;
     this.subscriptionService = subscriptionService;
     this.notifyService = notifyService;
+    this.logger = logger;
   }
 
   async updateSource(lastCheck, lastJobIdentifier) {
@@ -96,11 +98,11 @@ module.exports = class BauruEmpregosService {
   }
 
   async run() {
-    console.log('[BauruEmpregosService] Started crawling.');
-    console.log(`[BauruEmpregosService] Fetching source ${JobSource.BAURU_EMPREGOS}.`);
+    this.logger.info('[BauruEmpregosService] Started crawling.');
+    this.logger.info(`[BauruEmpregosService] Fetching source ${JobSource.BAURU_EMPREGOS}.`);
     const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
 
-    console.log('[BauruEmpregosService] Fetching jobs page.');
+    this.logger.info('[BauruEmpregosService] Fetching jobs page.');
     const fullJobsPage = await this.crawler.getPage(source.jobsUrl);
 
     const jobSummaries = this.parseJobsFromPage(fullJobsPage);
@@ -109,14 +111,14 @@ module.exports = class BauruEmpregosService {
     const shouldUpdate = await this.hasNewJobs(lastFoundJobIdentifier);
 
     if (!shouldUpdate) {
-      console.log(`[BauruEmpregosService] No new jobs since job with id ${source.lastJobIdentifier}.`);
+      this.logger.info(`[BauruEmpregosService] No new jobs since job with id ${source.lastJobIdentifier}.`);
       return true;
     }
 
     // TODO: fetch jobSummaries until last recorded.
     const newJobsSummaries = this.getNewJobs(jobSummaries, source.lastJobIdentifier);
 
-    console.log(`[BauruEmpregosService] Expanding ${newJobsSummaries.length} new jobs.`);
+    this.logger.info(`[BauruEmpregosService] Expanding ${newJobsSummaries.length} new jobs.`);
     const newJobs = await this.expandJobSumaries(newJobsSummaries, source);
 
     const notifications = await this
@@ -134,7 +136,7 @@ module.exports = class BauruEmpregosService {
 
     // This is needed so we don't notify users about the same job more than once.
     await this.updateSource(lastCheck, lastJobIdentifier);
-    console.log(`[BauruEmpregosService] Updating lastJobIdentifier to ${lastJobIdentifier} and lastCheck to ${lastCheck}.`);
+    this.logger.info(`[BauruEmpregosService] Updating lastJobIdentifier to ${lastJobIdentifier} and lastCheck to ${lastCheck}.`);
 
     return true;
   }
