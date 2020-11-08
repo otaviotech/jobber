@@ -16,6 +16,8 @@ async function main() {
   return 0;
 }
 
+logger.info('Jobber Started!');
+
 const task = cron.schedule('*/15 * * * *', () => {
   const getCurrentDate = () => formatISO9075(new Date());
   const executionId = nanoid();

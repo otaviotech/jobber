@@ -8,6 +8,10 @@ module.exports = {
     dsn: process.env.SENTRY_DSN,
   },
 
+  logdna: {
+    apiKey: process.env.LOGDNA_API_KEY,
+  },
+
   environment: {
     isProduction: process.env.NODE_ENV === 'production',
   },
