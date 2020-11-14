@@ -11,13 +11,16 @@ process.on('uncaughtException', logger.error);
 async function main() {
   const bauruEmpregosService = container.resolve('bauruEmpregosService');
 
+  // what does "run" do?
   await bauruEmpregosService.run();
 
   return 0;
 }
 
 logger.info('Jobber Started!');
+main();
 
+// what is it doing?
 const task = cron.schedule('*/15 * * * *', () => {
   const getCurrentDate = () => formatISO9075(new Date());
   const executionId = nanoid();

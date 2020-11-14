@@ -1,7 +1,12 @@
+/* eslint-disable class-methods-use-this */
+const cheerio = require('cheerio');
 const formatISO = require('date-fns/formatISO');
 const Source = require('../../model/source.model');
 const Job = require('../../model/job.model');
 const JobSource = require('../../constants/jobSource');
+
+// Utils
+const { getItemsUntilMatch, isEmpty } = require('../../utils/collection.utils');
 
 module.exports = class BauruEmpregosService {
   constructor({
@@ -18,6 +23,43 @@ module.exports = class BauruEmpregosService {
     this.logger = logger;
   }
 
+  /**
+   * @return {Promise<String>}
+   */
+  async fetchLastJobsPage() {
+    const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
+    const lastJobsPage = await this.crawler.getPage(source.jobsUrl);
+    return lastJobsPage.body;
+  }
+
+  /**
+   * @return {Job[]}
+   */
+  parseJobsFromLastJobsPage(lastJobsPage) {
+    const $ = cheerio.load(lastJobsPage);
+
+    return $('.vaga').map((i, cheerioEl) => {
+      const jobElement = $(cheerioEl);
+
+      const title = jobElement.find('.descricao-vaga').text().trim();
+      const description = jobElement.find('.descricao-vaga a').text().trim();
+      const url = jobElement.find('.descricao-vaga a').attr('href');
+      const id = url.replace('/home/detalhes/', '');
+      const city = jobElement.find('.cidade-vaga').text();
+
+      const job = new Job({
+        id,
+        title,
+        description,
+        city,
+        url,
+        jobSource: JobSource.BAURU_EMPREGOS,
+      });
+
+      return job;
+    }).get();
+  }
+
   async updateSource(lastCheck, lastJobIdentifier) {
     const historyEntry = new Source({
       jobSource: JobSource.BAURU_EMPREGOS,
@@ -30,6 +72,9 @@ module.exports = class BauruEmpregosService {
     return updatedSource;
   }
 
+  /**
+   * @return {Job}
+   */
   async getJobDetails(jobSummary, source) {
     const url = source.baseUrl + jobSummary.url;
     const page = await this.crawler.getPage(url);
@@ -47,7 +92,9 @@ module.exports = class BauruEmpregosService {
     return job;
   }
 
-  // eslint-disable-next-line class-methods-use-this
+  /**
+   * @return {Job[]}
+   */
   parseJobsFromPage(page) {
     const jobs = page.$('.vaga').map(function extractJobs() {
       const $ = page.$(this);
@@ -68,47 +115,53 @@ module.exports = class BauruEmpregosService {
     return jobs;
   }
 
-  async hasNewJobs(lastFoundJobIdentifier) {
+  /**
+   * @param {String} lastFoundJobIdentifier The last found job identifier.
+   * @return {Boolean}
+   */
+  async jobHasBeenComputed(lastFoundJobIdentifier) {
     const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
     return lastFoundJobIdentifier !== source.lastJobIdentifier;
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  getNewJobs(jobs, lastJobIdentifier) {
-    const newJobs = [];
-
-    jobs.some((job) => {
-      const isLastJob = job.id === lastJobIdentifier;
-
-      // We already handled this job.
-      if (isLastJob) {
-        return true;
-      }
-
-      newJobs.push(job);
-
-      return false;
-    });
-
-    return newJobs;
+  /**
+   * @param {String} lastFoundJobIdentifier The last found job identifier.
+   * @param {Job[]} jobs The job list.
+   * @return {Job[]}
+   */
+  getOnlyNewJobs(jobs, lastJobIdentifier) {
+    return getItemsUntilMatch(jobs, ({ id }) => id === lastJobIdentifier);
   }
 
+  /**
+   *
+   * @param {Job[]} jobSummaries The job summaries.
+   * @param {JobSource} source The job source.
+   * @return {Promise<Job[]>}
+   */
   async expandJobSumaries(jobSummaries, source) {
     return Promise.all(jobSummaries.map((js) => this.getJobDetails(js, source)));
   }
 
   async run() {
     this.logger.info('[BauruEmpregosService] Started crawling.');
+
     this.logger.info(`[BauruEmpregosService] Fetching source ${JobSource.BAURU_EMPREGOS}.`);
     const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
 
-    this.logger.info('[BauruEmpregosService] Fetching jobs page.');
-    const fullJobsPage = await this.crawler.getPage(source.jobsUrl);
+    this.logger.info('[BauruEmpregosService] Fetching last jobs page.');
+    const lastJobsPage = await this.fetchLastJobsPage();
 
-    const jobSummaries = this.parseJobsFromPage(fullJobsPage);
+    this.logger.info('[BauruEmpregosService] Parsing jobs from last jobs page.');
+    const jobSummaries = this.parseJobsFromLastJobsPage(lastJobsPage);
+
+    if (isEmpty(jobSummaries)) {
+      throw new Error('Could not fetch jobs.');
+    }
+
     const lastFoundJobIdentifier = jobSummaries[0].id;
 
-    const shouldUpdate = await this.hasNewJobs(lastFoundJobIdentifier);
+    const shouldUpdate = await this.jobHasBeenComputed(lastFoundJobIdentifier);
 
     if (!shouldUpdate) {
       this.logger.info(`[BauruEmpregosService] No new jobs since job with id ${source.lastJobIdentifier}.`);
@@ -116,7 +169,7 @@ module.exports = class BauruEmpregosService {
     }
 
     // TODO: fetch jobSummaries until last recorded.
-    const newJobsSummaries = this.getNewJobs(jobSummaries, source.lastJobIdentifier);
+    const newJobsSummaries = this.getOnlyNewJobs(jobSummaries, source.lastJobIdentifier);
 
     this.logger.info(`[BauruEmpregosService] Expanding ${newJobsSummaries.length} new jobs.`);
     const newJobs = await this.expandJobSumaries(newJobsSummaries, source);

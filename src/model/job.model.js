@@ -1,7 +1,23 @@
-module.exports = class Job {
+/**
+ * A Job role.
+ * @class
+ * @constructor
+ */
+class Job {
   constructor({
-    id, title, description, descriptionHtml, city, url, date, jobSource,
+    id,
+    title,
+    description,
+    descriptionHtml,
+    city,
+    url,
+    date,
+    jobSource,
   } = {}) {
+    /**
+     * The unique identifier of the job on its source.
+     * @type {string}
+     */
     this.id = id;
     this.title = title;
     this.description = description;
@@ -11,4 +27,6 @@ module.exports = class Job {
     this.date = date;
     this.jobSource = jobSource;
   }
-};
+}
+
+module.exports = Job;

@@ -39,6 +39,7 @@ container.register({
   subscriptionService: awilix.asClass(SubscriptionService),
 });
 
+// why is it creating an object?
 const nodeMailerAdapter = new NodemailerAdapter({
   service: 'gmail',
   user: env.gmail.user,
