@@ -7,6 +7,9 @@ const JobSource = require('../../constants/jobSource');
 
 // Utils
 const { getItemsUntilMatch, isEmpty } = require('../../utils/collection.utils');
+const LastJobsPage = require('./model/LastJobsPage.model');
+const StringUtils = require('../../utils/string.utils');
+const JobPage = require('./model/JobPage.model');
 
 module.exports = class BauruEmpregosService {
   constructor({
@@ -23,41 +26,46 @@ module.exports = class BauruEmpregosService {
     this.logger = logger;
   }
 
-  /**
-   * @return {Promise<String>}
-   */
-  async fetchLastJobsPage() {
-    const source = await this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
-    const lastJobsPage = await this.crawler.getPage(source.jobsUrl);
-    return lastJobsPage.body;
+  async getSource() {
+    return this.sourceRepository.getSource(JobSource.BAURU_EMPREGOS);
   }
 
   /**
-   * @return {Job[]}
+   * Gets the html of the page that contains the last published jobs.
+   * @return {Promise<LastJobsPage>}
    */
-  parseJobsFromLastJobsPage(lastJobsPage) {
-    const $ = cheerio.load(lastJobsPage);
+  async fetchLastJobsPage() {
+    const source = await this.getSource();
+    const lastJobsPageRequest = await this.crawler.getPage(source.jobsUrl);
+    return new LastJobsPage({ html: lastJobsPageRequest.body });
+  }
 
-    return $('.vaga').map((i, cheerioEl) => {
-      const jobElement = $(cheerioEl);
+  async fetchJobPage({ id, url, baseUrl } = {}) {
+    const hasBaseUrl = !StringUtils.isEmpty(baseUrl);
+    const hasUrl = !StringUtils.isEmpty(url);
+    const hasId = !StringUtils.isEmpty(id);
 
-      const title = jobElement.find('.descricao-vaga').text().trim();
-      const description = jobElement.find('.descricao-vaga a').text().trim();
-      const url = jobElement.find('.descricao-vaga a').attr('href');
-      const id = url.replace('/home/detalhes/', '');
-      const city = jobElement.find('.cidade-vaga').text();
+    let source;
 
-      const job = new Job({
-        id,
-        title,
-        description,
-        city,
-        url,
-        jobSource: JobSource.BAURU_EMPREGOS,
-      });
+    if (!hasUrl && !hasId) {
+      throw new Error('404 - Job not found at source.');
+    }
 
-      return job;
-    }).get();
+    if (!hasBaseUrl) {
+      source = await this.getSource();
+    }
+
+    const sourceBaseUrl = baseUrl || source.baseUrl;
+
+    const jobUrl = hasUrl
+      ? sourceBaseUrl + url
+      : `${sourceBaseUrl}/home/detalhes/${id}`;
+
+    const jobPageRequest = await this.crawler.getPage(jobUrl);
+
+    const jobPage = new JobPage({ html: jobPageRequest.body, url, id });
+
+    return jobPage;
   }
 
   async updateSource(lastCheck, lastJobIdentifier) {
@@ -70,49 +78,6 @@ module.exports = class BauruEmpregosService {
     const updatedSource = await this.sourceRepository.update(historyEntry);
 
     return updatedSource;
-  }
-
-  /**
-   * @return {Job}
-   */
-  async getJobDetails(jobSummary, source) {
-    const url = source.baseUrl + jobSummary.url;
-    const page = await this.crawler.getPage(url);
-    const { $ } = page;
-    const title = $('.descricao-vaga h1 b').text().trim();
-    const date = $('.descricao-vaga p').first().text().trim()
-      .replace('Cadastrado em: ', '');
-    const description = $('.descricao-vaga pre').text().trim();
-    const descriptionHtml = $('.descricao-vaga pre').html();
-    const { id } = jobSummary;
-    const city = $('.descricao-vaga p').eq(2).text().replace('Vaga em ', '');
-    const job = new Job({
-      id, title, description, descriptionHtml, city, url, date, jobSource: JobSource.BAURU_EMPREGOS,
-    });
-    return job;
-  }
-
-  /**
-   * @return {Job[]}
-   */
-  parseJobsFromPage(page) {
-    const jobs = page.$('.vaga').map(function extractJobs() {
-      const $ = page.$(this);
-
-      const title = $.find('.descricao-vaga').text().trim();
-      const description = $.find('.descricao-vaga a').text().trim();
-      const url = $.find('.descricao-vaga a').attr('href');
-      const id = url.replace('/home/detalhes/', '');
-      const city = $.find('.cidade-vaga').text();
-
-      const job = new Job({
-        id, title, description, city, url, jobSource: JobSource.BAURU_EMPREGOS,
-      });
-
-      return job;
-    }).get();
-
-    return jobs;
   }
 
   /**
@@ -134,13 +99,17 @@ module.exports = class BauruEmpregosService {
   }
 
   /**
-   *
    * @param {Job[]} jobSummaries The job summaries.
    * @param {JobSource} source The job source.
    * @return {Promise<Job[]>}
    */
   async expandJobSumaries(jobSummaries, source) {
-    return Promise.all(jobSummaries.map((js) => this.getJobDetails(js, source)));
+    return Promise.all(jobSummaries.map(async (jobSummary) => {
+      const { url, id } = jobSummary;
+      const { baseUrl } = source;
+      const jobPage = await this.fetchJobPage({ url, id, baseUrl });
+      return jobPage.job;
+    }));
   }
 
   async run() {
@@ -153,7 +122,7 @@ module.exports = class BauruEmpregosService {
     const lastJobsPage = await this.fetchLastJobsPage();
 
     this.logger.info('[BauruEmpregosService] Parsing jobs from last jobs page.');
-    const jobSummaries = this.parseJobsFromLastJobsPage(lastJobsPage);
+    const jobSummaries = lastJobsPage.jobs;
 
     if (isEmpty(jobSummaries)) {
       throw new Error('Could not fetch jobs.');
@@ -178,10 +147,10 @@ module.exports = class BauruEmpregosService {
       .subscriptionService
       .getNotificationsBySubscription(JobSource.BAURU_EMPREGOS, newJobs);
 
-    const hasNotificationsToSend = notifications.length > 0;
+    const hasNotificationsToSend = !isEmpty(notifications);
 
     if (hasNotificationsToSend) {
-      await this.notifyService.notifyByEmail(notifications);
+      // await this.notifyService.notifyByEmail(notifications);
     }
 
     const lastCheck = formatISO(new Date());
