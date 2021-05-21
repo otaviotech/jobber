@@ -3,12 +3,13 @@ const awilix = require('awilix');
 
 // Values
 const db = require('./infra/db');
+const firebaseClient = require('./infra/repository/firebase/firebase.client');
 const env = require('./env');
 
 // Repositories
-const JobRepository = require('./infra/repository/job.repository');
-const SourceRepository = require('./infra/repository/source.repository');
-const SubscriptionRepository = require('./infra/repository/subscription.repository');
+const JobRepository = require('./infra/repository/firebase/job.repository');
+const SourceRepository = require('./infra/repository/firebase/source.repository');
+const SubscriptionRepository = require('./infra/repository/firebase/subscription.repository');
 
 // Domain Services
 const BauruEmpregosService = require('./service/bauruEmpregos/bauruEmpregos.service');
@@ -57,7 +58,8 @@ container.register({
 
 // Register values
 container.register({
-  db: awilix.asValue(db),
+  // db: awilix.asValue(db),
+  firebaseClient: awilix.asValue(firebaseClient),
   env: awilix.asValue(env),
 });
 
