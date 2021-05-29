@@ -1,12 +1,28 @@
 const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 
 module.exports = class NodemailerAdapter {
-  constructor({ service, user, pass }) {
+  constructor({
+    service, user, clientId, clientSecret, refreshToken,
+  } = {}) {
+    const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
+
+    this.oAuth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      REDIRECT_URI,
+    );
+
+    this.oAuth2Client.setCredentials({ refresh_token: refreshToken });
+
     this.transporter = nodemailer.createTransport({
       service,
       auth: {
+        type: 'OAuth2',
         user,
-        pass,
+        clientId,
+        clientSecret,
+        refreshToken,
       },
     });
   }

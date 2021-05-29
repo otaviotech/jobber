@@ -2,7 +2,6 @@ require('dotenv').config();
 const awilix = require('awilix');
 
 // Values
-const db = require('./infra/db');
 const firebaseClient = require('./infra/repository/firebase/firebase.client');
 const env = require('./env');
 
@@ -43,7 +42,9 @@ container.register({
 const nodeMailerAdapter = new NodemailerAdapter({
   service: 'gmail',
   user: env.gmail.user,
-  pass: env.gmail.pass,
+  clientId: env.gmail.clientId,
+  clientSecret: env.gmail.clientSecret,
+  refreshToken: env.gmail.refreshToken,
 });
 
 // Register infra services
@@ -58,7 +59,6 @@ container.register({
 
 // Register values
 container.register({
-  // db: awilix.asValue(db),
   firebaseClient: awilix.asValue(firebaseClient),
   env: awilix.asValue(env),
 });

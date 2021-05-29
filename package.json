@@ -15,6 +15,7 @@
     "crawler": "^1.2.2",
     "date-fns": "^2.16.1",
     "dotenv": "^8.2.0",
+    "googleapis": "^74.2.0",
     "log4js": "^6.3.0",
     "logdna": "^3.5.1",
     "lowdb": "^1.0.0",
