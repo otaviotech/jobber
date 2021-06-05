@@ -9,6 +9,7 @@ module.exports = class Subscription {
     metadata = new SubscriptionMetadata(),
     name,
     sources = [],
+    cities = [],
   } = {}) {
     this.id = id;
     this.email = email;
@@ -17,5 +18,6 @@ module.exports = class Subscription {
     this.metadata = metadata;
     this.name = name;
     this.sources = sources;
+    this.cities = cities;
   }
 };

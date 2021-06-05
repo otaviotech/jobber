@@ -25,6 +25,7 @@ module.exports = class SubscriptionRepository {
           footer: dbSubscription.metadata.footer,
         }),
         sources: dbSubscription.sources,
+        cities: dbSubscription.cities,
       }));
 
     return subscriptions;
