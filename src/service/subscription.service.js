@@ -21,6 +21,10 @@ module.exports = class SubscriptionService {
         const titleMatches = subscription.tags
           .some(((tag) => asCaseInsensitiveRegExp(tag).test(job.title)));
 
+        const cityMatches = subscription
+          .cities
+          .some((city) => asCaseInsensitiveRegExp(city).test(job.city));
+
         const descriptionMatches = subscription
           .tags
           .some(((tag) => asCaseInsensitiveRegExp(tag).test(job.description)));
@@ -33,7 +37,7 @@ module.exports = class SubscriptionService {
           .excludeTags
           .some(((excludeTag) => asCaseInsensitiveRegExp(excludeTag).test(job.description)));
 
-        const shouldExclude = titleMatchesExclude || descriptionMatchesExclude;
+        const shouldExclude = !cityMatches || titleMatchesExclude || descriptionMatchesExclude;
         const shouldNotify = !shouldExclude && (titleMatches || descriptionMatches);
 
         if (!shouldNotify) {
